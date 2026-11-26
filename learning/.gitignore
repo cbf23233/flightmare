@@ -1,0 +1,6 @@
+# Generated figures
+*.png
+
+# Python cache
+__pycache__/
+*.pyc
