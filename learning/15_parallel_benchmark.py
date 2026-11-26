@@ -224,7 +224,7 @@ csv_path = root / "learning/15_parallel_benchmark.csv"
 
 with open(csv_path, "w", newline="") as f:
     writer = csv.DictWriter(
-        f, fieldnames=list(results[0].keys())
+        f, fieldnames=list(results[0].keys()), lineterminator="\n"
     )
     writer.writeheader()
     writer.writerows(results)
