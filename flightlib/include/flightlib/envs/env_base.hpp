@@ -36,7 +36,12 @@ class EnvBase {
   virtual bool isTerminalState(Scalar &reward);
 
   // auxilirary functions
-  inline void setSeed(const int seed) { std::srand(seed); };
+  inline void setSeed(const int seed) {
+    std::srand(seed);
+    random_gen_.seed(seed);
+    norm_dist_.reset();
+    uniform_dist_.reset();
+  };
   inline int getObsDim() { return obs_dim_; };
   inline int getActDim() { return act_dim_; };
   inline Scalar getSimTimeStep() { return sim_dt_; };

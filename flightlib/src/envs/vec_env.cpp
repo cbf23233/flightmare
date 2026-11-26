@@ -44,6 +44,9 @@ void VecEnv<EnvBase>::init(void) {
     envs_.push_back(std::make_unique<EnvBase>());
   }
 
+  // Initialize random generators
+  setSeed(seed_);
+
   // set Unity
   setUnity(unity_render_);
 
