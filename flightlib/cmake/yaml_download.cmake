@@ -5,7 +5,7 @@ project(yaml-download)
 include(ExternalProject)
 ExternalProject_Add(yaml
   GIT_REPOSITORY    https://github.com/jbeder/yaml-cpp.git
-  GIT_TAG           master
+  GIT_TAG           yaml-cpp-0.7.0
   SOURCE_DIR        "${PROJECT_SOURCE_DIR}/externals/yaml-src"
   BINARY_DIR        "${PROJECT_SOURCE_DIR}/externals/yaml-bin"
   CONFIGURE_COMMAND ""
