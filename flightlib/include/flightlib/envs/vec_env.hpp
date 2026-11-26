@@ -28,6 +28,8 @@ class VecEnv {
 
   // - public OpenAI-gym style functions for vectorized environment
   bool reset(Ref<MatrixRowMajor<>> obs);
+  bool resetState(const Ref<const MatrixRowMajor<>> state,
+                  Ref<MatrixRowMajor<>> obs);
   bool step(Ref<MatrixRowMajor<>> act, Ref<MatrixRowMajor<>> obs,
             Ref<Vector<>> reward, Ref<BoolVector<>> done,
             Ref<MatrixRowMajor<>> extra_info);

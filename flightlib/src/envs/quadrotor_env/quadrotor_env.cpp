@@ -80,6 +80,42 @@ bool QuadrotorEnv::reset(Ref<Vector<>> obs, const bool random) {
   return true;
 }
 
+bool QuadrotorEnv::resetState(const Ref<const Vector<>> state,
+                              Ref<Vector<>> obs) {
+  if (state.size() != 13 || obs.size() != obs_dim_ ||
+      !state.allFinite()) {
+    return false;
+  }
+
+  QuadState initial_state;
+  initial_state.setZero();
+
+  initial_state.p = state.segment<3>(0);
+  initial_state.qx = state.segment<4>(3);
+  initial_state.v = state.segment<3>(7);
+  initial_state.w = state.segment<3>(10);
+
+  const Scalar q_norm = initial_state.qx.norm();
+
+  if (!std::isfinite(q_norm) || q_norm < 1e-6f) {
+    return false;
+  }
+
+  initial_state.qx /= q_norm;
+
+  if (!quadrotor_ptr_->reset(initial_state)) {
+    return false;
+  }
+
+  quad_state_ = initial_state;
+  quad_act_.setZero();
+
+  cmd_.t = 0.0;
+  cmd_.thrusts.setZero();
+
+  return getObs(obs);
+}
+
 bool QuadrotorEnv::getObs(Ref<Vector<>> obs) {
   quadrotor_ptr_->getState(&quad_state_);
 

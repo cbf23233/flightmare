@@ -80,6 +80,37 @@ bool VecEnv<EnvBase>::reset(Ref<MatrixRowMajor<>> obs) {
 }
 
 template<typename EnvBase>
+bool VecEnv<EnvBase>::resetState(
+    const Ref<const MatrixRowMajor<>> state,
+    Ref<MatrixRowMajor<>> obs) {
+  if (state.rows() != num_envs_ || state.cols() != 13 ||
+      obs.rows() != num_envs_ || obs.cols() != obs_dim_ ||
+      !state.allFinite()) {
+    return false;
+  }
+
+  // Validate all quaternions before resetting environments.
+  for (int i = 0; i < num_envs_; i++) {
+    const Scalar q_norm = state.row(i).segment(3, 4).norm();
+    if (!std::isfinite(q_norm) || q_norm < 1e-6f) {
+      return false;
+    }
+  }
+
+  receive_id_ = 0;
+
+  for (int i = 0; i < num_envs_; i++) {
+    Vector<> initial_state = state.row(i).transpose();
+
+    if (!envs_[i]->resetState(initial_state, obs.row(i))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template<typename EnvBase>
 bool VecEnv<EnvBase>::step(Ref<MatrixRowMajor<>> act, Ref<MatrixRowMajor<>> obs,
                            Ref<Vector<>> reward, Ref<BoolVector<>> done,
                            Ref<MatrixRowMajor<>> extra_info) {

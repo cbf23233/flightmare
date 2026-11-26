@@ -49,6 +49,7 @@ class QuadrotorEnv final : public EnvBase {
 
   // - public OpenAI-gym-style functions
   bool reset(Ref<Vector<>> obs, const bool random = true) override;
+  bool resetState(const Ref<const Vector<>> state, Ref<Vector<>> obs);
   Scalar step(const Ref<Vector<>> act, Ref<Vector<>> obs) override;
 
   // - public set functions
