@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cmath>
 #include "flightlib/common/math.hpp"
 #include "iostream"
 
@@ -132,13 +134,28 @@ inline void insert(const Matrix<>& from, Matrix<>* const into,
 }
 
 void quaternionToEuler(const Quaternion& quat, Ref<Vector<3>> euler) {
-  euler.x() = std::atan2(2 * quat.w() * quat.x() + 2 * quat.y() * quat.z(),
-                         quat.w() * quat.w() - quat.x() * quat.x() -
-                           quat.y() * quat.y() + quat.z() * quat.z());
-  euler.y() = -std::asin(2 * quat.x() * quat.z() - 2 * quat.w() * quat.y());
-  euler.z() = std::atan2(2 * quat.w() * quat.z() + 2 * quat.x() * quat.y(),
-                         quat.w() * quat.w() + quat.x() * quat.x() -
-                           quat.y() * quat.y() - quat.z() * quat.z());
+  const Quaternion q = quat.normalized();
+
+  const Scalar w = q.w();
+  const Scalar x = q.x();
+  const Scalar y = q.y();
+  const Scalar z = q.z();
+
+  // Roll
+  euler.x() = std::atan2(
+    2 * (w * x + y * z),
+    w * w - x * x - y * y + z * z);
+
+  // Pitch
+  const Scalar sin_pitch = 2 * (w * y - z * x);
+
+  euler.y() = std::asin(
+    std::clamp(sin_pitch, Scalar(-1), Scalar(1)));
+
+  // Yaw
+  euler.z() = std::atan2(
+    2 * (w * z + x * y),
+    w * w + x * x - y * y - z * z);
 }
 
 

@@ -1,3 +1,4 @@
+#include "flightlib/common/math.hpp"
 #include "flightlib/envs/quadrotor_env/quadrotor_env.hpp"
 
 namespace flightlib {
@@ -120,8 +121,11 @@ bool QuadrotorEnv::getObs(Ref<Vector<>> obs) {
   quadrotor_ptr_->getState(&quad_state_);
 
   // convert quaternion to euler angle
-  Vector<3> euler_zyx = quad_state_.q().toRotationMatrix().eulerAngles(2, 1, 0);
-  // quaternionToEuler(quad_state_.q(), euler);
+  Vector<3> euler_xyz;
+  quaternionToEuler(quad_state_.q(), euler_xyz);
+
+  // Preserve observation order: yaw, pitch, roll.
+  const Vector<3> euler_zyx = euler_xyz.reverse();
   quad_obs_ << quad_state_.p, euler_zyx, quad_state_.v, quad_state_.w;
 
   obs.segment<quadenv::kNObs>(quadenv::kObs) = quad_obs_;
