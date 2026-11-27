@@ -340,4 +340,3 @@ def compute_control(
     }
 
     return action, info
-
