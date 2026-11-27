@@ -8,3 +8,6 @@ __pycache__/
 # Experiment 21 generated results
 /21_projection_results/
 /21_intrinsics_results/
+
+# Experiment 22 generated results
+/22_rgbd_results/

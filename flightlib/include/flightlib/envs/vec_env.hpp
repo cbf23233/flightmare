@@ -60,6 +60,9 @@ class VecEnv {
   bool getRGBImage(const int env_id,
                    const int camera_id,
                    cv::Mat &image);
+  bool getDepthMap(const int env_id,
+                   const int camera_id,
+                   cv::Mat &image);
   void disconnectUnity();
 
   // public functions

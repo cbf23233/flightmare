@@ -303,6 +303,31 @@ bool VecEnv<EnvBase>::getRGBImage(const int env_id,
 }
 
 template<typename EnvBase>
+bool VecEnv<EnvBase>::getDepthMap(const int env_id,
+                                  const int camera_id,
+                                  cv::Mat &image) {
+  const size_t num_cameras = getNumOfCameras(env_id);
+
+  if (camera_id < 0) {
+    throw std::out_of_range("Invalid camera index.");
+  }
+
+  if (num_cameras == 0) {
+    return false;
+  }
+
+  if (static_cast<size_t>(camera_id) >= num_cameras) {
+    throw std::out_of_range("Invalid camera index.");
+  }
+
+  if (!unity_render_ || !unity_ready_) {
+    return false;
+  }
+
+  return envs_[env_id]->getDepthMap(camera_id, image);
+}
+
+template<typename EnvBase>
 void VecEnv<EnvBase>::disconnectUnity(void) {
   if (unity_bridge_ptr_ != nullptr) {
     unity_bridge_ptr_->disconnectUnity();

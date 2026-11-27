@@ -13,3 +13,6 @@ camera:
   fov: 70.0
   position: [0.0, 0.0, 0.0]  # Body-frame position [m]
   rotation: [0.0, 0.0, 0.0]  # Roll, pitch, yaw [deg]
+  depth: false
+  segmentation: false
+  optical_flow: false

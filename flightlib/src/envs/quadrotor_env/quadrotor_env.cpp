@@ -280,8 +280,13 @@ bool QuadrotorEnv::configureCamera(const YAML::Node &cfg) {
     return false;
   }
 
-  // RGB only in the first version.
-  if (!camera->setPostProcesscing({false, false, false})) {
+  // Optional camera rendering layers.
+  const bool depth = cfg["depth"].as<bool>(false);
+  const bool segmentation = cfg["segmentation"].as<bool>(false);
+  const bool optical_flow = cfg["optical_flow"].as<bool>(false);
+
+  if (!camera->setPostProcesscing({
+        depth, segmentation, optical_flow})) {
     return false;
   }
 
@@ -301,6 +306,17 @@ bool QuadrotorEnv::getRGBImage(const size_t camera_id,
   }
 
   return camera->getRGBImage(image);
+}
+
+bool QuadrotorEnv::getDepthMap(const size_t camera_id,
+                              cv::Mat &image) {
+  std::shared_ptr<RGBCamera> camera;
+
+  if (!quadrotor_ptr_->getCamera(camera_id, camera)) {
+    return false;
+  }
+
+  return camera->getDepthMap(image);
 }
 
 bool QuadrotorEnv::getAct(Ref<Vector<>> act) const {

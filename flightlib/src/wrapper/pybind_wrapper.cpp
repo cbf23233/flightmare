@@ -76,6 +76,42 @@ PYBIND11_MODULE(flightgym, m) {
          },
          py::arg("env_id") = 0,
          py::arg("camera_id") = 0)
+    .def("getDepthMap",
+         [](VecEnv<QuadrotorEnv>& env,
+            const int env_id,
+            const int camera_id) -> py::object {
+           cv::Mat depth;
+
+           if (!env.getDepthMap(env_id, camera_id, depth)) {
+             return py::none();
+           }
+
+           if (depth.empty() || depth.type() != CV_32FC1) {
+             throw std::runtime_error(
+               "Invalid depth image format.");
+           }
+
+           py::array_t<float> result({
+             static_cast<py::ssize_t>(depth.rows),
+             static_cast<py::ssize_t>(depth.cols)
+           });
+
+           const size_t row_bytes =
+             static_cast<size_t>(depth.cols) * sizeof(float);
+
+           float* dst = result.mutable_data();
+
+           for (int row = 0; row < depth.rows; ++row) {
+             std::memcpy(
+               dst + static_cast<size_t>(row) * depth.cols,
+               depth.ptr<float>(row),
+               row_bytes);
+           }
+
+           return result;
+         },
+         py::arg("env_id") = 0,
+         py::arg("camera_id") = 0)
     .def("disconnectUnity", &VecEnv<QuadrotorEnv>::disconnectUnity)
     .def("getNumOfEnvs", &VecEnv<QuadrotorEnv>::getNumOfEnvs)
     .def("getObsDim", &VecEnv<QuadrotorEnv>::getObsDim)
