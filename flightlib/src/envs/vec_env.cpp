@@ -150,8 +150,10 @@ bool VecEnv<EnvBase>::step(Ref<MatrixRowMajor<>> act, Ref<MatrixRowMajor<>> obs,
   }
 
   if (unity_render_ && unity_ready_) {
-    unity_bridge_ptr_->getRender(0);
-    unity_bridge_ptr_->handleOutput();
+    if (!render(last_render_frame_id_ + 1)) {
+      logger_.warn("Automatic Unity rendering failed.");
+      return false;
+    }
   }
   return true;
 }
@@ -247,6 +249,16 @@ bool VecEnv<EnvBase>::render(const FrameID frame_id) {
     logger_.warn("Flightmare Unity is not connected.");
     return false;
   }
+
+  // Frame IDs must be strictly increasing.
+  if (frame_id <= last_render_frame_id_) {
+    logger_.warn("Unity frame ID must be strictly increasing.");
+    return false;
+  }
+
+  // Reserve the frame ID before sending the request.
+  // Do not reuse it even if communication fails.
+  last_render_frame_id_ = frame_id;
 
   if (!unity_bridge_ptr_->getRender(frame_id)) {
     return false;

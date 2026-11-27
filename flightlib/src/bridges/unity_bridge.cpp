@@ -1,3 +1,9 @@
+#include <exception>
+#include <utility>
+#include <cstdlib>
+#include <chrono>
+#include <thread>
+
 #include "flightlib/bridges/unity_bridge.hpp"
 
 namespace flightlib {
@@ -37,7 +43,30 @@ bool UnityBridge::initializeConnections() {
 bool UnityBridge::connectUnity(const SceneID scene_id) {
   Scalar time_out_count = 0;
   Scalar sleep_useconds = 0.2 * 1e5;
-  setScene(scene_id);
+  if (!setScene(scene_id)) {
+    return false;
+  }
+
+  // Synchronize initial poses with the current simulation states.
+  // The states may have changed since addQuadrotor().
+  QuadState quad_state;
+
+  for (size_t idx = 0; idx < unity_quadrotors_.size(); idx++) {
+    if (!unity_quadrotors_[idx]->getState(&quad_state)) {
+      logger_.error("Cannot get initial Quadrotor state.");
+      return false;
+    }
+
+    const auto position = positionRos2Unity(quad_state.p);
+    const auto rotation = quaternionRos2Unity(quad_state.q());
+
+    settings_.vehicles[idx].position = position;
+    settings_.vehicles[idx].rotation = rotation;
+
+    pub_msg_.vehicles[idx].position = position;
+    pub_msg_.vehicles[idx].rotation = rotation;
+  }
+
   // try to connect unity
   logger_.info("Trying to Connect Unity.");
   std::cout << "[";
@@ -50,10 +79,15 @@ bool UnityBridge::connectUnity(const SceneID scene_id) {
         "or Unity Editor is running the Flightmare.");
       return false;
     }
-    // initialize Scene settings
-    sendInitialSettings();
-    // check if setting is done
+    // Check the ready response before sending more settings.
     unity_ready_ = handleSettings();
+
+    if (unity_ready_) {
+      break;
+    }
+
+    // Retry initialization only when Unity is not ready.
+    sendInitialSettings();
     // sleep
     usleep(sleep_useconds);
     // increase time out counter
@@ -127,7 +161,11 @@ bool UnityBridge::getRender(const FrameID frame_id) {
   json json_msg = pub_msg_;
   msg << json_msg.dump();
   // send message without blocking
-  pub_.send(msg, true);
+  if (!pub_.send(msg, true)) {
+    logger_.warn("Failed to send Unity render request.");
+    return false;
+  }
+
   return true;
 }
 
@@ -199,13 +237,79 @@ bool UnityBridge::addStaticObject(std::shared_ptr<StaticObject> static_object) {
 }
 
 bool UnityBridge::handleOutput() {
-  // create new message object
   zmqpp::message msg;
-  sub_.receive(msg);
-  // unpack message metadata
-  std::string json_sub_msg = msg.get(0);
-  // parse metadata
-  SubMessage_t sub_msg = json::parse(json_sub_msg);
+  SubMessage_t sub_msg;
+
+  const FrameID expected_frame_id = pub_msg_.frame_id;
+
+  const auto deadline =
+    std::chrono::steady_clock::now() +
+    std::chrono::seconds(2);
+
+  bool matched = false;
+
+  while (std::chrono::steady_clock::now() < deadline) {
+    zmqpp::message incoming;
+
+    // Non-blocking receive with a bounded total waiting time.
+    if (!sub_.receive(incoming, true)) {
+      std::this_thread::sleep_for(
+        std::chrono::milliseconds(1));
+      continue;
+    }
+
+    try {
+      const auto metadata = json::parse(incoming.get(0));
+
+      // Ignore initialization responses.
+      if (metadata.find("frame_id") == metadata.end()) {
+        if (metadata.find("ready") != metadata.end()) {
+          continue;
+        }
+
+        logger_.warn("Invalid Unity output metadata.");
+        return false;
+      }
+
+      const FrameID received_frame_id =
+        metadata.at("frame_id").get<FrameID>();
+
+      if (std::getenv("FLIGHTMARE_DEBUG_FRAME") != nullptr) {
+        std::cout << "[FrameSync]"
+                  << " requested=" << expected_frame_id
+                  << " received=" << received_frame_id
+                  << " match="
+                  << (expected_frame_id == received_frame_id
+                        ? "yes" : "no")
+                  << std::endl;
+      }
+
+      // Discard stale frames before updating any sensor data.
+      if (received_frame_id < expected_frame_id) {
+        continue;
+      }
+
+      // A future frame is unexpected in synchronous rendering.
+      if (received_frame_id > expected_frame_id) {
+        logger_.warn("Unexpected future Unity frame.");
+        return false;
+      }
+
+      sub_msg = metadata.get<SubMessage_t>();
+      msg = std::move(incoming);
+      matched = true;
+      break;
+
+    } catch (const std::exception& e) {
+      logger_.warn("Failed to parse Unity output metadata.");
+      return false;
+    }
+  }
+
+  if (!matched) {
+    logger_.warn("Timeout waiting for matching Unity frame.");
+    return false;
+  }
 
   size_t image_i = 1;
   // ensureBufferIsAllocated(sub_msg);

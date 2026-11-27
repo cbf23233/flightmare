@@ -97,6 +97,9 @@ class VecEnv {
   RenderMessage_t unity_output_;
   uint16_t receive_id_{0};
 
+  // Shared frame sequence for automatic and explicit rendering.
+  FrameID last_render_frame_id_{0};
+
   // auxiliar variables
   int seed_, num_envs_, obs_dim_, act_dim_;
   Matrix<> obs_dummy_;

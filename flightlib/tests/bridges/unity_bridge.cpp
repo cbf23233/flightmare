@@ -53,13 +53,11 @@ TEST(UnityBridge, HandleOutputRGB) {
   quad->addRGBCamera(rgb);
   unity_bridge.addQuadrotor(quad);
 
-  EXPECT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
+  ASSERT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
 
   FrameID frame_id = 1;
-  unity_bridge.getRender(frame_id);
-  bool handle_output = unity_bridge.handleOutput();
-
-  EXPECT_TRUE(handle_output);
+  ASSERT_TRUE(unity_bridge.getRender(frame_id));
+  ASSERT_TRUE(unity_bridge.handleOutput());
 
   cv::Mat test_img;
 
@@ -82,13 +80,11 @@ TEST(UnityBridge, HandleOutputDepth) {
   quad->addRGBCamera(rgb);
   unity_bridge.addQuadrotor(quad);
 
-  EXPECT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
+  ASSERT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
 
   FrameID frame_id = 1;
-  unity_bridge.getRender(frame_id);
-  bool handle_output = unity_bridge.handleOutput();
-
-  EXPECT_TRUE(handle_output);
+  ASSERT_TRUE(unity_bridge.getRender(frame_id));
+  ASSERT_TRUE(unity_bridge.handleOutput());
 
   cv::Mat test_img;
 
@@ -111,13 +107,11 @@ TEST(UnityBridge, HandleOutputSegmentation) {
   quad->addRGBCamera(rgb);
   unity_bridge.addQuadrotor(quad);
 
-  EXPECT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
+  ASSERT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
 
   FrameID frame_id = 1;
-  unity_bridge.getRender(frame_id);
-  bool handle_output = unity_bridge.handleOutput();
-
-  EXPECT_TRUE(handle_output);
+  ASSERT_TRUE(unity_bridge.getRender(frame_id));
+  ASSERT_TRUE(unity_bridge.handleOutput());
 
   cv::Mat test_img;
 
@@ -140,13 +134,11 @@ TEST(UnityBridge, HandleOutputOpticalFlow) {
   quad->addRGBCamera(rgb);
   unity_bridge.addQuadrotor(quad);
 
-  EXPECT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
+  ASSERT_TRUE(unity_bridge.connectUnity(UnityScene::GARAGE));
 
   FrameID frame_id = 1;
-  unity_bridge.getRender(frame_id);
-  bool handle_output = unity_bridge.handleOutput();
-
-  EXPECT_TRUE(handle_output);
+  ASSERT_TRUE(unity_bridge.getRender(frame_id));
+  ASSERT_TRUE(unity_bridge.handleOutput());
 
   cv::Mat test_img;
 

@@ -130,7 +130,11 @@ try:
         reset_initial_state(position, rpy_deg)
 
         # Display initial state without advancing dynamics.
-        if not env.render(case_id + 1):
+        # Each previous case contains one explicit render
+        # followed by 'steps' automatic renders.
+        frame_id = case_id * (steps + 1) + 1
+
+        if not env.render(frame_id):
             raise RuntimeError("Initial rendering failed")
 
         time.sleep(2)

@@ -163,7 +163,11 @@ try:
 
         print(f"\n========== Running {name} ==========")
 
-        if not env.render(case_id + 1):
+        # Each previous case contains one explicit render
+        # followed by 'steps' automatic renders.
+        frame_id = case_id * (steps + 1) + 1
+
+        if not env.render(frame_id):
             raise RuntimeError("Initial rendering failed")
 
         time.sleep(2)
