@@ -11,3 +11,5 @@ __pycache__/
 
 # Experiment 22 generated results
 /22_rgbd_results/
+
+/26_render_results/
