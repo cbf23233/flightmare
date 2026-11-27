@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include "flightlib/envs/vec_env.hpp"
 
 namespace flightlib {
@@ -39,9 +41,26 @@ void VecEnv<EnvBase>::init(void) {
   omp_set_num_threads(cfg_["env"]["num_threads"].as<int>());
 
   // create & setup environments
-  const bool render = false;
+  const YAML::Node camera_cfg = cfg_["camera"];
+
+  const bool camera_enabled =
+    camera_cfg && camera_cfg["enabled"].as<bool>(false);
+
+  if (camera_enabled && !unity_render_) {
+    throw std::invalid_argument(
+      "Camera requires Unity rendering to be enabled.");
+  }
+
   for (int i = 0; i < num_envs_; i++) {
-    envs_.push_back(std::make_unique<EnvBase>());
+    auto env = std::make_unique<EnvBase>();
+
+    if (camera_enabled &&
+        !env->configureCamera(camera_cfg)) {
+      throw std::invalid_argument(
+        "Invalid camera configuration.");
+    }
+
+    envs_.push_back(std::move(env));
   }
 
   // Initialize random generators
@@ -234,6 +253,41 @@ bool VecEnv<EnvBase>::render(const FrameID frame_id) {
   }
 
   return unity_bridge_ptr_->handleOutput();
+}
+
+template<typename EnvBase>
+size_t VecEnv<EnvBase>::getNumOfCameras(const int env_id) const {
+  if (env_id < 0 ||
+      static_cast<size_t>(env_id) >= envs_.size()) {
+    throw std::out_of_range("Invalid environment index.");
+  }
+
+  return envs_[env_id]->getNumOfCameras();
+}
+
+template<typename EnvBase>
+bool VecEnv<EnvBase>::getRGBImage(const int env_id,
+                                  const int camera_id,
+                                  cv::Mat &image) {
+  const size_t num_cameras = getNumOfCameras(env_id);
+
+  if (camera_id < 0) {
+    throw std::out_of_range("Invalid camera index.");
+  }
+
+  if (num_cameras == 0) {
+    return false;
+  }
+
+  if (static_cast<size_t>(camera_id) >= num_cameras) {
+    throw std::out_of_range("Invalid camera index.");
+  }
+
+  if (!unity_render_ || !unity_ready_) {
+    return false;
+  }
+
+  return envs_[env_id]->getRGBImage(camera_id, image);
 }
 
 template<typename EnvBase>

@@ -105,3 +105,106 @@ TEST(QuadrotorEnv, StepEnv) {
   // in case this failed, decrease motor_tau in the Quadrotor class.
   // EXPECT_TRUE(((next_obs - obs).norm() < 1.0));
 }
+
+TEST(QuadrotorEnv, CameraDisabled) {
+  QuadrotorEnv env;
+
+  EXPECT_EQ(env.getNumOfCameras(), 0u);
+
+  const YAML::Node cfg = YAML::Load("enabled: false");
+
+  EXPECT_TRUE(env.configureCamera(cfg));
+  EXPECT_EQ(env.getNumOfCameras(), 0u);
+
+  cv::Mat image;
+  EXPECT_FALSE(env.getRGBImage(0, image));
+}
+
+TEST(QuadrotorEnv, CameraDefaultConfig) {
+  QuadrotorEnv env;
+
+  const YAML::Node cfg = YAML::Load("enabled: true");
+
+  ASSERT_TRUE(env.configureCamera(cfg));
+  EXPECT_EQ(env.getNumOfCameras(), 1u);
+
+  cv::Mat image;
+  EXPECT_FALSE(env.getRGBImage(0, image));
+  EXPECT_FALSE(env.getRGBImage(1, image));
+}
+
+TEST(QuadrotorEnv, CameraCustomConfig) {
+  QuadrotorEnv env;
+
+  const YAML::Node cfg = YAML::Load(R"(
+enabled: true
+width: 640
+height: 360
+fov: 90.0
+position: [0.1, -0.2, 0.3]
+rotation: [10.0, -20.0, 30.0]
+)");
+
+  ASSERT_TRUE(env.configureCamera(cfg));
+  EXPECT_EQ(env.getNumOfCameras(), 1u);
+}
+
+TEST(QuadrotorEnv, CameraDuplicateConfig) {
+  QuadrotorEnv env;
+
+  const YAML::Node cfg = YAML::Load("enabled: true");
+
+  ASSERT_TRUE(env.configureCamera(cfg));
+  EXPECT_FALSE(env.configureCamera(cfg));
+  EXPECT_EQ(env.getNumOfCameras(), 1u);
+}
+
+TEST(QuadrotorEnv, CameraInvalidDimensions) {
+  QuadrotorEnv env;
+
+  for (const auto& config : {
+         "{enabled: true, width: 0}",
+         "{enabled: true, width: -640}",
+         "{enabled: true, height: 0}",
+         "{enabled: true, height: -480}"}) {
+    EXPECT_FALSE(env.configureCamera(YAML::Load(config)));
+    EXPECT_EQ(env.getNumOfCameras(), 0u);
+  }
+}
+
+TEST(QuadrotorEnv, CameraInvalidFOV) {
+  QuadrotorEnv env;
+
+  for (const auto& config : {
+         "{enabled: true, fov: 0}",
+         "{enabled: true, fov: -10}",
+         "{enabled: true, fov: 180}",
+         "{enabled: true, fov: 200}",
+         "{enabled: true, fov: .nan}",
+         "{enabled: true, fov: .inf}"}) {
+    EXPECT_FALSE(env.configureCamera(YAML::Load(config)));
+    EXPECT_EQ(env.getNumOfCameras(), 0u);
+  }
+}
+
+TEST(QuadrotorEnv, CameraInvalidExtrinsics) {
+  QuadrotorEnv env;
+
+  for (const auto& config : {
+         "{enabled: true, position: [0, 0]}",
+         "{enabled: true, position: [0, 0, 0, 0]}",
+         "{enabled: true, position: [.nan, 0, 0]}",
+         "{enabled: true, position: [0, .inf, 0]}",
+         "{enabled: true, rotation: [0, 0]}",
+         "{enabled: true, rotation: [0, 0, 0, 0]}",
+         "{enabled: true, rotation: [.nan, 0, 0]}",
+         "{enabled: true, rotation: [0, .inf, 0]}"}) {
+    EXPECT_FALSE(env.configureCamera(YAML::Load(config)));
+    EXPECT_EQ(env.getNumOfCameras(), 0u);
+  }
+
+  // Invalid configurations must not prevent a later valid setup.
+  ASSERT_TRUE(
+    env.configureCamera(YAML::Load("enabled: true")));
+  EXPECT_EQ(env.getNumOfCameras(), 1u);
+}

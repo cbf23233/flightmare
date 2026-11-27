@@ -209,6 +209,100 @@ bool QuadrotorEnv::loadParam(const YAML::Node &cfg) {
   return true;
 }
 
+bool QuadrotorEnv::configureCamera(const YAML::Node &cfg) {
+  if (!cfg || !cfg["enabled"].as<bool>(false)) {
+    return true;
+  }
+
+  // The first version supports one camera per quadrotor.
+  if (!quadrotor_ptr_->getCameras().empty()) {
+    return false;
+  }
+
+  auto camera = std::make_shared<RGBCamera>();
+
+  const int width = cfg["width"].as<int>(720);
+  const int height = cfg["height"].as<int>(480);
+  const Scalar fov = cfg["fov"].as<Scalar>(70.0);
+
+  if (!camera->setWidth(width) ||
+      !camera->setHeight(height) ||
+      !camera->setFOV(fov)) {
+    return false;
+  }
+
+  Vector<3> position = Vector<3>::Zero();
+  Vector<3> rotation_deg = Vector<3>::Zero();
+
+  if (cfg["position"]) {
+    const auto values =
+      cfg["position"].as<std::vector<Scalar>>();
+
+    if (values.size() != 3) {
+      return false;
+    }
+
+    for (int i = 0; i < 3; ++i) {
+      position(i) = values[i];
+    }
+  }
+
+  if (cfg["rotation"]) {
+    const auto values =
+      cfg["rotation"].as<std::vector<Scalar>>();
+
+    if (values.size() != 3) {
+      return false;
+    }
+
+    for (int i = 0; i < 3; ++i) {
+      rotation_deg(i) = values[i];
+    }
+  }
+
+  if (!position.allFinite() ||
+      !rotation_deg.allFinite()) {
+    return false;
+  }
+
+  constexpr Scalar deg_to_rad =
+    3.14159265358979323846 / 180.0;
+
+  const Vector<3> rpy = rotation_deg * deg_to_rad;
+
+  Matrix<3, 3> rotation =
+    (Eigen::AngleAxis<Scalar>(rpy(2), Vector<3>::UnitZ()) *
+     Eigen::AngleAxis<Scalar>(rpy(1), Vector<3>::UnitY()) *
+     Eigen::AngleAxis<Scalar>(rpy(0), Vector<3>::UnitX()))
+      .toRotationMatrix();
+
+  if (!camera->setRelPose(position, rotation)) {
+    return false;
+  }
+
+  // RGB only in the first version.
+  if (!camera->setPostProcesscing({false, false, false})) {
+    return false;
+  }
+
+  return quadrotor_ptr_->addRGBCamera(camera);
+}
+
+size_t QuadrotorEnv::getNumOfCameras() const {
+  return quadrotor_ptr_->getCameras().size();
+}
+
+bool QuadrotorEnv::getRGBImage(const size_t camera_id,
+                              cv::Mat &image) {
+  std::shared_ptr<RGBCamera> camera;
+
+  if (!quadrotor_ptr_->getCamera(camera_id, camera)) {
+    return false;
+  }
+
+  return camera->getRGBImage(image);
+}
+
 bool QuadrotorEnv::getAct(Ref<Vector<>> act) const {
   if (cmd_.t >= 0.0 && quad_act_.allFinite()) {
     act = quad_act_;

@@ -56,6 +56,10 @@ class VecEnv {
   bool setUnity(bool render);
   bool connectUnity();
   bool render(const FrameID frame_id);
+  size_t getNumOfCameras(const int env_id) const;
+  bool getRGBImage(const int env_id,
+                   const int camera_id,
+                   cv::Mat &image);
   void disconnectUnity();
 
   // public functions

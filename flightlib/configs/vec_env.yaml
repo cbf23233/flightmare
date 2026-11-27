@@ -1,6 +1,15 @@
 env:
   seed: 1
-  scene_id: 0  # 0 warehouse, 1 garage, 3 natureforest
+  scene_id: 0  # 0 industrial, 1 warehouse, 2 garage, 3 natureforest, 4 tunnels
   num_envs: 100
   num_threads: 10 
-  render: no 
+  render: no
+
+# Onboard RGB camera
+camera:
+  enabled: false
+  width: 720
+  height: 480
+  fov: 70.0
+  position: [0.0, 0.0, 0.0]  # Body-frame position [m]
+  rotation: [0.0, 0.0, 0.0]  # Roll, pitch, yaw [deg]

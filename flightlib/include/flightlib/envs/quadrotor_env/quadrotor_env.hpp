@@ -54,6 +54,9 @@ class QuadrotorEnv final : public EnvBase {
 
   // - public set functions
   bool loadParam(const YAML::Node &cfg);
+  bool configureCamera(const YAML::Node &cfg);
+  size_t getNumOfCameras() const;
+  bool getRGBImage(const size_t camera_id, cv::Mat &image);
 
   // - public get functions
   bool getObs(Ref<Vector<>> obs) override;

@@ -3,6 +3,11 @@
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/numpy.h>
+
+#include <cstring>
+#include <stdexcept>
+#include <opencv2/imgproc.hpp>
 
 // flightlib
 #include "flightlib/envs/env_base.hpp"
@@ -28,6 +33,49 @@ PYBIND11_MODULE(flightgym, m) {
     .def("curriculumUpdate", &VecEnv<QuadrotorEnv>::curriculumUpdate)
     .def("connectUnity", &VecEnv<QuadrotorEnv>::connectUnity)
     .def("render", &VecEnv<QuadrotorEnv>::render)
+    .def("getNumOfCameras",
+         &VecEnv<QuadrotorEnv>::getNumOfCameras,
+         py::arg("env_id") = 0)
+    .def("getRGBImage",
+         [](VecEnv<QuadrotorEnv>& env,
+            const int env_id,
+            const int camera_id) -> py::object {
+           cv::Mat bgr;
+
+           if (!env.getRGBImage(env_id, camera_id, bgr)) {
+             return py::none();
+           }
+
+           if (bgr.empty() || bgr.type() != CV_8UC3) {
+             throw std::runtime_error(
+               "Invalid RGB image format.");
+           }
+
+           cv::Mat rgb;
+           cv::cvtColor(bgr, rgb, cv::COLOR_BGR2RGB);
+
+           py::array_t<uint8_t> result({
+             static_cast<py::ssize_t>(rgb.rows),
+             static_cast<py::ssize_t>(rgb.cols),
+             static_cast<py::ssize_t>(3)
+           });
+
+           const size_t row_bytes =
+             static_cast<size_t>(rgb.cols) * 3;
+
+           uint8_t* dst = result.mutable_data();
+
+           for (int row = 0; row < rgb.rows; ++row) {
+             std::memcpy(
+               dst + static_cast<size_t>(row) * row_bytes,
+               rgb.ptr<uint8_t>(row),
+               row_bytes);
+           }
+
+           return result;
+         },
+         py::arg("env_id") = 0,
+         py::arg("camera_id") = 0)
     .def("disconnectUnity", &VecEnv<QuadrotorEnv>::disconnectUnity)
     .def("getNumOfEnvs", &VecEnv<QuadrotorEnv>::getNumOfEnvs)
     .def("getObsDim", &VecEnv<QuadrotorEnv>::getObsDim)
