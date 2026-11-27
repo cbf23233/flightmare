@@ -55,6 +55,7 @@ class VecEnv {
   // flightmare (visualization)
   bool setUnity(bool render);
   bool connectUnity();
+  bool render(const FrameID frame_id);
   void disconnectUnity();
 
   // public functions

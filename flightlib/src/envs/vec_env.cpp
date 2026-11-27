@@ -222,6 +222,21 @@ template<typename EnvBase>
 void VecEnv<EnvBase>::isTerminalState(Ref<BoolVector<>> terminal_state) {}
 
 template<typename EnvBase>
+bool VecEnv<EnvBase>::render(const FrameID frame_id) {
+  if (!unity_render_ || !unity_ready_ ||
+      unity_bridge_ptr_ == nullptr) {
+    logger_.warn("Flightmare Unity is not connected.");
+    return false;
+  }
+
+  if (!unity_bridge_ptr_->getRender(frame_id)) {
+    return false;
+  }
+
+  return unity_bridge_ptr_->handleOutput();
+}
+
+template<typename EnvBase>
 void VecEnv<EnvBase>::disconnectUnity(void) {
   if (unity_bridge_ptr_ != nullptr) {
     unity_bridge_ptr_->disconnectUnity();
