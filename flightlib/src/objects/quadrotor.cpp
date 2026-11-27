@@ -236,6 +236,9 @@ bool Quadrotor::updateDynamics(const QuadrotorDynamics &dynamics) {
 }
 
 bool Quadrotor::addRGBCamera(std::shared_ptr<RGBCamera> camera) {
+  if (!camera) {
+    return false;
+  }
   rgb_cameras_.push_back(camera);
   return true;
 }
@@ -249,8 +252,8 @@ std::vector<std::shared_ptr<RGBCamera>> Quadrotor::getCameras(void) const {
 };
 
 bool Quadrotor::getCamera(const size_t cam_id,
-                          std::shared_ptr<RGBCamera> camera) const {
-  if (cam_id <= rgb_cameras_.size()) {
+                          std::shared_ptr<RGBCamera>& camera) const {
+  if (cam_id >= rgb_cameras_.size()) {
     return false;
   }
 

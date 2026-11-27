@@ -52,7 +52,7 @@ class RGBCamera : SensorBase {
   void enableSegmentation(const bool on);
 
  private:
-  Logger logger_{"RBGCamera"};
+  Logger logger_{"RGBCamera"};
 
   // camera parameters
   int channels_;

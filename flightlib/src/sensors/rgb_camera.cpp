@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "flightlib/sensors/rgb_camera.hpp"
 
 namespace flightlib {
@@ -8,34 +10,43 @@ RGBCamera::RGBCamera()
     height_(480),
     fov_{70.0},
     depth_scale_{0.2},
+    B_r_BC_(Vector<3>::Zero()),
+    T_BC_(Matrix<4, 4>::Identity()),
     enabled_layers_({false, false, false}) {}
 
 RGBCamera::~RGBCamera() {}
 
 bool RGBCamera::feedImageQueue(const int image_layer,
                                const cv::Mat& image_mat) {
-  queue_mutex_.lock();
+  std::lock_guard<std::mutex> lock(queue_mutex_);
   switch (image_layer) {
     case 0:  // rgb image
-      if (rgb_queue_.size() > queue_size_) rgb_queue_.resize(queue_size_);
+      while (rgb_queue_.size() >= queue_size_) {
+        rgb_queue_.pop_front();
+      }
       rgb_queue_.push_back(image_mat);
       break;
     case CameraLayer::DepthMap:
-      if (depth_queue_.size() > queue_size_) depth_queue_.resize(queue_size_);
+      while (depth_queue_.size() >= queue_size_) {
+        depth_queue_.pop_front();
+      }
       depth_queue_.push_back(image_mat);
       break;
     case CameraLayer::Segmentation:
-      if (segmentation_queue_.size() > queue_size_)
-        segmentation_queue_.resize(queue_size_);
+      while (segmentation_queue_.size() >= queue_size_) {
+        segmentation_queue_.pop_front();
+      }
       segmentation_queue_.push_back(image_mat);
       break;
     case CameraLayer::OpticalFlow:
-      if (opticalflow_queue_.size() > queue_size_)
-        opticalflow_queue_.resize(queue_size_);
+      while (opticalflow_queue_.size() >= queue_size_) {
+        opticalflow_queue_.pop_front();
+      }
       opticalflow_queue_.push_back(image_mat);
       break;
+    default:
+      return false;
   }
-  queue_mutex_.unlock();
   return true;
 }
 
@@ -76,7 +87,7 @@ bool RGBCamera::setHeight(const int height) {
 }
 
 bool RGBCamera::setFOV(const Scalar fov) {
-  if (fov <= 0.0) {
+  if (!std::isfinite(fov) || fov <= 0.0 || fov >= 180.0) {
     logger_.warn(
       "The setting value for Camera Field-of-View is not valid, discard the "
       "setting.");
@@ -87,7 +98,8 @@ bool RGBCamera::setFOV(const Scalar fov) {
 }
 
 bool RGBCamera::setDepthScale(const Scalar depth_scale) {
-  if (depth_scale_ < 0.0 || depth_scale_ > 1.0) {
+  if (!std::isfinite(depth_scale) ||
+      depth_scale < 0.0 || depth_scale > 1.0) {
     logger_.warn(
       "The setting value for Camera Depth Scale is not valid, discard the "
       "setting.");
@@ -125,27 +137,28 @@ Scalar RGBCamera::getFOV(void) const { return fov_; }
 Scalar RGBCamera::getDepthScale(void) const { return depth_scale_; }
 
 void RGBCamera::enableDepth(const bool on) {
-  if (enabled_layers_[CameraLayer::DepthMap] == on) {
+  if (enabled_layers_[CameraLayer::DepthMap - 1] == on) {
     logger_.warn("Depth layer was already %s.", on ? "on" : "off");
   }
-  enabled_layers_[CameraLayer::DepthMap] = on;
+  enabled_layers_[CameraLayer::DepthMap - 1] = on;
 }
 
 void RGBCamera::enableSegmentation(const bool on) {
-  if (enabled_layers_[CameraLayer::Segmentation] == on) {
+  if (enabled_layers_[CameraLayer::Segmentation - 1] == on) {
     logger_.warn("Segmentation layer was already %s.", on ? "on" : "off");
   }
-  enabled_layers_[CameraLayer::Segmentation] = on;
+  enabled_layers_[CameraLayer::Segmentation - 1] = on;
 }
 
 void RGBCamera::enableOpticalFlow(const bool on) {
-  if (enabled_layers_[CameraLayer::OpticalFlow] == on) {
+  if (enabled_layers_[CameraLayer::OpticalFlow - 1] == on) {
     logger_.warn("Optical Flow layer was already %s.", on ? "on" : "off");
   }
-  enabled_layers_[CameraLayer::OpticalFlow] = on;
+  enabled_layers_[CameraLayer::OpticalFlow - 1] = on;
 }
 
 bool RGBCamera::getRGBImage(cv::Mat& rgb_img) {
+  std::lock_guard<std::mutex> lock(queue_mutex_);
   if (!rgb_queue_.empty()) {
     rgb_img = rgb_queue_.front();
     rgb_queue_.pop_front();
@@ -155,6 +168,7 @@ bool RGBCamera::getRGBImage(cv::Mat& rgb_img) {
 }
 
 bool RGBCamera::getDepthMap(cv::Mat& depth_map) {
+  std::lock_guard<std::mutex> lock(queue_mutex_);
   if (!depth_queue_.empty()) {
     depth_map = depth_queue_.front();
     depth_queue_.pop_front();
@@ -164,6 +178,7 @@ bool RGBCamera::getDepthMap(cv::Mat& depth_map) {
 }
 
 bool RGBCamera::getSegmentation(cv::Mat& segmentation) {
+  std::lock_guard<std::mutex> lock(queue_mutex_);
   if (!segmentation_queue_.empty()) {
     segmentation = segmentation_queue_.front();
     segmentation_queue_.pop_front();
@@ -173,6 +188,7 @@ bool RGBCamera::getSegmentation(cv::Mat& segmentation) {
 }
 
 bool RGBCamera::getOpticalFlow(cv::Mat& opticalflow) {
+  std::lock_guard<std::mutex> lock(queue_mutex_);
   if (!opticalflow_queue_.empty()) {
     opticalflow = opticalflow_queue_.front();
     opticalflow_queue_.pop_front();

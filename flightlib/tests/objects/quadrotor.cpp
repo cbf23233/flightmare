@@ -222,3 +222,61 @@ TEST(Quadrotor, RunSimulatorBodyRate) {
   EXPECT_NEAR(final_state.t, quad_state.t, 1e-9);
   EXPECT_TRUE(quad_state.x.isApprox(final_state.x));
 }
+
+TEST(Quadrotor, CameraManagement) {
+  Quadrotor quad;
+
+  auto camera0 = std::make_shared<RGBCamera>();
+  auto camera1 = std::make_shared<RGBCamera>();
+
+  EXPECT_TRUE(quad.getCameras().empty());
+
+  ASSERT_TRUE(quad.addRGBCamera(camera0));
+  ASSERT_TRUE(quad.addRGBCamera(camera1));
+
+  ASSERT_EQ(quad.getCameras().size(), 2u);
+
+  std::shared_ptr<RGBCamera> output;
+
+  ASSERT_TRUE(quad.getCamera(0, output));
+  EXPECT_EQ(output, camera0);
+
+  ASSERT_TRUE(quad.getCamera(1, output));
+  EXPECT_EQ(output, camera1);
+
+  const auto cameras = quad.getCameras();
+
+  EXPECT_EQ(cameras[0], camera0);
+  EXPECT_EQ(cameras[1], camera1);
+}
+
+TEST(Quadrotor, InvalidCameraIndex) {
+  Quadrotor quad;
+  std::shared_ptr<RGBCamera> output;
+
+  EXPECT_FALSE(quad.getCamera(0, output));
+
+  auto camera = std::make_shared<RGBCamera>();
+  ASSERT_TRUE(quad.addRGBCamera(camera));
+
+  EXPECT_FALSE(quad.getCamera(1, output));
+  EXPECT_FALSE(quad.getCamera(100, output));
+  EXPECT_FALSE(quad.getCamera(
+    static_cast<size_t>(-1), output));
+
+  ASSERT_TRUE(quad.getCamera(0, output));
+  EXPECT_EQ(output, camera);
+}
+
+TEST(Quadrotor, NullCamera) {
+  Quadrotor quad;
+
+  EXPECT_FALSE(quad.addRGBCamera(nullptr));
+  EXPECT_TRUE(quad.getCameras().empty());
+
+  auto camera = std::make_shared<RGBCamera>();
+
+  ASSERT_TRUE(quad.addRGBCamera(camera));
+  EXPECT_FALSE(quad.addRGBCamera(nullptr));
+  EXPECT_EQ(quad.getCameras().size(), 1u);
+}
